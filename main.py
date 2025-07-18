@@ -26,4 +26,4 @@ if __name__ == "__main__":
 
         loss_info_tuple = (total_frames, left_hand_lost, right_hand_lost)
         visualize_debug(video_file, original_data, interpolated_data, dims, loss_info_tuple)
-        create_keypoint_video('hard.mp4' , original_data, interpolated_data, dims , is_debug = True)
+        create_keypoint_video('test.mp4' , original_data, interpolated_data, dims , is_debug = True)
