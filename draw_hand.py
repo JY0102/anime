@@ -11,7 +11,7 @@ def linear_joint(video_path):
     mp_hands = mp.solutions.hands
     hands = mp_hands.Hands(
         static_image_mode=False,
-        max_num_hands=2,  # 양손을 감지하도록 설정
+        max_num_hands=2,  
         min_detection_confidence=0.9,
         min_tracking_confidence=0.5        
     )
@@ -160,8 +160,6 @@ def create_keypoint_video(output_filename, original_df, interpolated_df, frame_d
         # --- 핵심 추가 부분: 프레임을 비디오 파일에 쓰기 ---
         video_writer.write(black_canvas)
         # ------------------------------------------------
-
-        if cv2.waitKey(50) & 0xFF == ord('q'): break # 재생 속도 조절 (1로 빠르게)
 
     # --- 핵심 추가 부분: 자원 해제 ---
     video_writer.release()
