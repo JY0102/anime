@@ -1,21 +1,30 @@
-import os
 import numpy as np
 import pandas as pd
 
 class Detect_joint:         
 
-    def __init__(self , frames : pd.DataFrame , treshold : float = 8 , bf : int= 5 , is_debug = False , idx = None):       
+    frames = None
+    def __init__(self , df : pd.DataFrame , treshold : float = 8 , is_debug = False , debug_data = None):       
         
+        self.frames = df
         # 관절 이동거리에 비례해서 이상치 값 추출
-        Check_Distance(frames , treshold , bf , is_debug , idx)
+        self.distance = Check_Distance(df , treshold , is_debug , debug_data)
         
         # 뼈 길이에 비례해서 이상치 값 추출
-        Check_Bone(frames , treshold ,is_debug , idx )
+        Check_Bone(df , treshold ,is_debug , debug_data)
         
-              
+        self.delete_data()
+        
+    def delete_data(self):
+        for idx in self.distance.left_last:
+            delete_column = self.frames.loc[idx].filter(like='left',axis=0).index 
+            self.frames.loc[idx, delete_column] = np.nan
+                  
 class Check_Distance:
     
-    def __init__(self, frames :pd.DataFrame, treshold: float, bf: int , is_debug = False , idx = None):
+
+    
+    def __init__(self, frames :pd.DataFrame, treshold: float, is_debug = False , debug_data = None):
         """
         이동 거리에 비례해서 이상치 값을 추출합니다.
         
@@ -26,13 +35,34 @@ class Check_Distance:
         
         """
         
-        for idx in range(21):
-            left_pos  = self.list_extend(frames, idx , 'left')
-            right_pos = self.list_extend(frames, idx , 'right')
+        가로 = 21
+        세로 = len(frames)
+        left_check = [[False for _ in range(가로)] for _ in range(세로)]
+        right_check = [[False for _ in range(가로)] for _ in range(세로)]
+        
+        for bone_num in range(21):
+            left_pos  = self.list_extend(frames, bone_num , 'left')
+            right_pos = self.list_extend(frames, bone_num , 'right')
 
-            self.main_cal(left_pos , right_pos , treshold , bf)
+            left_check_idx , right_check_idx = self.main_cal(left_pos , right_pos , treshold)
+            
+            if len(left_check_idx):
+                for num in left_check_idx:
+                    left_check[num][bone_num] = True
+            if len(right_check_idx):
+                for num in right_check_idx:
+                    right_check[num][bone_num] = True
+                    
+        left_result = [(num , sum(left_check[num])) for num in range(len(left_check)) if sum(left_check[num]) >= treshold + 5]
+        right_result = [(num , sum(right_check[num])) for num in range(len(right_check)) if sum(right_check[num]) >= treshold + 5]
 
-    def main_cal(self, left_pos: list , right_pos: list, treshold: float, bf: int) -> list:
+        self.left_last = self.chose_idx(left_result)
+        self.right_last = self.chose_idx(right_result)
+        
+        if is_debug and debug_data :
+            self.write_log(debug_data[0] , self.left_last , self.right_last , debug_data[1] , debug_data[2])
+            
+    def main_cal(self, left_pos: list , right_pos: list, treshold: float ) -> list:
         
         """
         주 거리 계산 알고리즘 , 평균거리 보다 임계값보다 큰 값의 인덱스 번호 저장
@@ -57,8 +87,7 @@ class Check_Distance:
         left_check_idx  = np.where(left_dis > left_avg * treshold)[0].tolist()
         right_check_idx = np.where(right_dis > right_avg * treshold)[0].tolist()
         
-        if len(left_check_idx) or len(right_check_idx):
-            print()
+        return left_check_idx , right_check_idx
                     
     def cal_distance(self , joints : list) -> list:
         """ 
@@ -75,6 +104,10 @@ class Check_Distance:
         for idx in range(len(joints) - 1):
             start = joints[idx]
             end   = joints[idx+1]
+            
+            if np.isnan(start).any() or np.isnan(end).any():
+                distances.append(np.nan)
+                continue
             
             이동거리 = np.linalg.norm(end - start)
             distances.append(이동거리)
@@ -97,21 +130,62 @@ class Check_Distance:
         
         position_x = []
         position_y = []
-        position_z = []
         
         position_x.extend(frames[f'{hand_type}_landmark_x_{idx}'].tolist())
         position_y.extend(frames[f'{hand_type}_landmark_y_{idx}'].tolist())
-        position_z.extend(frames[f'{hand_type}_landmark_z_{idx}'].tolist())
         
         positions = []                
         for num in range(len(position_x)):
-            positions.append(np.array((position_x[num] , position_y[num] , position_z[num])))
-            
-        return positions     
+            positions.append(np.array((position_x[num] , position_y[num])))
 
+        return positions     
+    
+    def write_log(self , idx , left_result ,right_result , left_lost , right_lost ):
+        left_path  = 'debug//distance//left_log.txt'
+        right_path = 'debug//distance//right_log.txt'
+        import os
+        import json
+        
+        if os.path.exists(left_path) and idx == 1:
+            os.remove(left_path)
+        if os.path.exists(right_path)and idx == 1:
+            os.remove(right_path)
+        
+        if len(left_result) > 0 :            
+            with open(left_path, "a", encoding='utf-8') as file:
+                data = json.dumps(f'{idx} :{left_result}' , indent=4)
+                file.write(f'프레임손실율 : {left_lost}\n')
+                file.write(f'{data}\n\n')
+        
+        if len(right_result) > 0 :
+            with open(right_path, "a", encoding='utf-8') as file:
+                data = json.dumps(f'{idx} :{right_result}' , indent=4)
+                file.write(f'프레임손실율 : {right_lost}\n')
+                file.write(f'{data}\n\n')
+        
+    def chose_idx(self , last):
+        
+        def check():
+            if len(group) > 1:
+                    group.clear()
+            elif len(group) != 0:
+                result.append(group[0] + 1)
+                    
+        group = []
+        result = []
+            
+        for i in range(0 , len(last) -1):
+            if last[i+1][0] - last[i][0] == 1:
+                group.append(last[i][0])
+            else :
+                check()
+        if len(last) == 2:
+            check()
+        
+        return result
 class Check_Bone:
     
-    def __init__(self , frames :pd.DataFrame, treshold: float , is_debug = False , idx = None):
+    def __init__(self , frames :pd.DataFrame, treshold: float , is_debug = False , debug_data = None):
         
         """
         평균 뼈 길이를 계산 후 평균 뼈 길이보다 작을 시 이상치 값 판단.
@@ -152,12 +226,11 @@ class Check_Bone:
                 for num in right_check_idx:
                     right_check[num][bone_num] = True
         
-        x = 5
-        left_result = [(idx , sum(left_check[idx])) for idx in range(len(left_check)) if sum(left_check[idx]) >= x]
-        right_result = [(idx , sum(right_check[idx])) for idx in range(len(right_check)) if sum(right_check[idx]) >= x]
-               
-        if is_debug and idx :
-            self.write_log(idx , left_result , right_result)
+        left_result = [(num , sum(left_check[num])) for num in range(len(left_check)) if sum(left_check[num]) >= treshold]
+        right_result = [(num , sum(right_check[num])) for num in range(len(right_check)) if sum(right_check[num]) >= treshold]
+              
+        if is_debug and debug_data :
+            self.write_log(debug_data[0] , left_result , right_result , debug_data[1] , debug_data[2])
             
     def list_extend(self, frames : pd.DataFrame ,hand_type : str) -> list:        
         """
@@ -230,15 +303,27 @@ class Check_Bone:
             
         return average
     
-    def write_log(self , idx , left_result ,right_result ):
+    def write_log(self , idx , left_result ,right_result , left_lost , right_lost ):
+        left_path = 'debug//bone//left_log.txt'
+        right_path = 'debug//bone//right_log.txt'
+        import os
+        import json
         
-        line = '---------------------------\n'
-        with open('debug//left_log.txt', "a", encoding='utf-8') as file:
-            import json
-            data = json.dumps(left_result , indent=4)
-            file.write(f'{idx}\n{data}{line}')
+        if os.path.exists(left_path) and idx == 1:
+            os.remove(left_path)
+        if os.path.exists(right_path)and idx == 1:
+            os.remove(right_path)
+            
+        with open(left_path, "a", encoding='utf-8') as file:
+            data = json.dumps(f'{idx} :{left_result}' , indent=4)
+            file.write(f'프레임손실율 : {left_lost}\n')
+            file.write(f'{data}\n\n')
         
-        with open('debug//right_log.txt', "a", encoding='utf-8') as file:
-            import json
-            data = json.dumps(right_result , indent=4)
-            file.write(f'{idx}\n{data}{line}')
+        with open(right_path, "a", encoding='utf-8') as file:
+            data = json.dumps(f'{idx} :{right_result}' , indent=4)
+            file.write(f'프레임손실율 : {right_lost}\n')
+            file.write(f'{data}\n\n')
+    
+    
+    
+    

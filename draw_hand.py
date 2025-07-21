@@ -2,7 +2,7 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import pandas as pd
-from Utils.Spline import interpolate_with_cubicspline
+from Utils.Spline import spline
 
 def linear_joint(video_path):
     """
@@ -25,7 +25,6 @@ def linear_joint(video_path):
     frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     
     all_landmarks_data = []
-    print("영상 처리 중 (양손)...")
     
     while cap.isOpened():
         ret, frame = cap.read()
@@ -36,7 +35,7 @@ def linear_joint(video_path):
         
         frame_landmarks = {f'{side}_{h_type}_{i}': np.nan 
                            for side in ['left', 'right'] 
-                           for h_type in ['landmark_x', 'landmark_y' , 'landmark_z'] 
+                           for h_type in ['landmark_x', 'landmark_y'] 
                            for i in range(21)}
 
         if results.multi_hand_landmarks:
@@ -47,20 +46,15 @@ def linear_joint(video_path):
                 for i, landmark in enumerate(hand_landmarks.landmark):
                     frame_landmarks[f'{hand_side}_landmark_x_{i}'] = landmark.x
                     frame_landmarks[f'{hand_side}_landmark_y_{i}'] = landmark.y
-                    frame_landmarks[f'{hand_side}_landmark_z_{i}'] = landmark.z
         
         all_landmarks_data.append(frame_landmarks)
-
+    
     cap.release()
     hands.close()
-    print("영상 처리 완료.")
     
     original_df = pd.DataFrame(all_landmarks_data)
-    # 새로 만든 CubicSpline 보간 함수를 호출합니다.
-    df = original_df.interpolate(method='linear', limit_direction='both', axis=0) 
-    interpolated_df = interpolate_with_cubicspline(df)
     
-    return original_df, interpolated_df, (frame_width, frame_height)
+    return original_df, (frame_width, frame_height)
 
 def draw_hand(frame, landmark_row, original_row, hand_side, frame_dims , is_debug = False):
     """한 손의 랜드마크와 연결선을 그리는 보조 함수."""
@@ -98,13 +92,11 @@ def draw_hand(frame, landmark_row, original_row, hand_side, frame_dims , is_debu
             
 def visualize_debug(video_path, original_df, interpolated_df, frame_dimensions, loss_info):
     """
-    [수정된 함수]
     보간된 양손의 결과와 프레임 손실 정보를 영상 위에 시각화하는 함수.
     """
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened(): return
 
-    print("\n영상에 양손 보간 결과를 시각화합니다. 'q'를 눌러 종료하세요.")
     frame_idx = 0
     while cap.isOpened():
         ret, frame = cap.read()
@@ -134,7 +126,6 @@ def visualize_debug(video_path, original_df, interpolated_df, frame_dimensions, 
 
 def create_keypoint_video(output_filename, original_df, interpolated_df, frame_dimensions, fps=30 , is_debug = False):
     """
-    [수정된 함수]
     키포인트 애니메이션을 시각화하고 MP4 파일로 저장하는 함수.
     """
     frame_width, frame_height = frame_dimensions
@@ -144,7 +135,6 @@ def create_keypoint_video(output_filename, original_df, interpolated_df, frame_d
     video_writer = cv2.VideoWriter(output_filename, fourcc, fps, (frame_width, frame_height))
     # ---------------------------------------------
 
-    print(f"\n키포인트 애니메이션을 '{output_filename}' 파일로 저장합니다...")
     
     for frame_idx in range(len(interpolated_df)):
         black_canvas = np.zeros((frame_height, frame_width, 3), dtype=np.uint8)
@@ -164,7 +154,6 @@ def create_keypoint_video(output_filename, original_df, interpolated_df, frame_d
     # --- 핵심 추가 부분: 자원 해제 ---
     video_writer.release()
     cv2.destroyAllWindows()
-    print(f"'{output_filename}' 저장이 완료되었습니다.")
     # -----------------------------------
     
 
