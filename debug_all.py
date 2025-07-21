@@ -7,7 +7,7 @@ def debug_test(idx):
     video_file = fr'c:\Users\User\Desktop\원천데이터\REAL\WORD\01\NIA_SL_WORD15{idx :02d}_REAL01_F.mp4'  
     # video_file = r'c:\Users\User\Desktop\frame\output_0120.png'  
 
-    original_data, interpolated_data, dims = linear_joint(video_file)
+    original_data, dims = linear_joint(video_file)
 
  
     if original_data is not None:
