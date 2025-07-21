@@ -141,10 +141,15 @@ class Check_Distance:
         return positions     
     
     def write_log(self , idx , left_result ,right_result , left_lost , right_lost ):
-        left_path  = 'debug//distance//left_log.txt'
-        right_path = 'debug//distance//right_log.txt'
         import os
         import json
+        left_dir = 'debug//distance//'
+        right_dir = 'debug//distance//'
+        left_path  = os.path.join(left_dir , 'left_log.txt')
+        right_path = os.path.join(right_dir , 'right_log.txt')
+        
+        os.makedirs(left_dir, exist_ok=True)
+        os.makedirs(right_dir, exist_ok=True)
         
         if os.path.exists(left_path) and idx == 1:
             os.remove(left_path)
