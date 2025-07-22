@@ -1,11 +1,12 @@
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import json
 import numpy as np
 import pandas as pd
 class Detect_joint:         
 
     frames = None
-    def __init__(self , df : pd.DataFrame , treshold : float = 8 , is_debug = False , debug_data = None):       
+    def __init__(self , df : pd.DataFrame, treshold : float = 8, is_debug = False, debug_data = None):       
         
         self.frames = df
         # 관절 이동거리에 비례해서 이상치 값 추출
@@ -22,8 +23,9 @@ class Detect_joint:
             self.frames.loc[idx, delete_column] = np.nan
                   
 class Check_Distance:
-    
-
+   
+    left_last = None
+    right_last = None
     
     def __init__(self, frames :pd.DataFrame, treshold: float, is_debug = False , debug_data = None):
         """
@@ -62,7 +64,33 @@ class Check_Distance:
         
         if is_debug and debug_data :
             self.write_log(debug_data[0] , self.left_last , self.right_last , debug_data[1] , debug_data[2])
+                
+    def list_extend(self, frames : pd.DataFrame , idx : int , hand_type : str) -> list:        
+        """
+        MediaPipe에서 뽑은 좌표 정규화
+        
+        Args:
+            idx: 뼈위치 인덱스값
+            hand_type: 왼손 , 오른손 ( left , right)
             
+        Returns:
+            list : 특정관절의 프레임별 좌표 값 
+            list[N] -> N프레임일 때의 특정 관절의 좌표 값
+            [np.array[x , y, z]]            
+        """
+        
+        position_x = []
+        position_y = []
+        
+        position_x.extend(frames[f'{hand_type}_landmark_x_{idx}'].tolist())
+        position_y.extend(frames[f'{hand_type}_landmark_y_{idx}'].tolist())
+        
+        positions = []                
+        for num in range(len(position_x)):
+            positions.append(np.array((position_x[num] , position_y[num])))
+
+        return positions     
+     
     def main_cal(self, left_pos: list , right_pos: list, treshold: float ) -> list:
         
         """
@@ -114,57 +142,7 @@ class Check_Distance:
             distances.append(이동거리)
             
         return np.array(distances)
-            
-    def list_extend(self, frames : pd.DataFrame , idx : int , hand_type : str) -> list:        
-        """
-        MediaPipe에서 뽑은 좌표 정규화
-        
-        Args:
-            idx: 뼈위치 인덱스값
-            hand_type: 왼손 , 오른손 ( left , right)
-            
-        Returns:
-            list : 특정관절의 프레임별 좌표 값 
-            list[N] -> N프레임일 때의 특정 관절의 좌표 값
-            [np.array[x , y, z]]            
-        """
-        
-        position_x = []
-        position_y = []
-        
-        position_x.extend(frames[f'{hand_type}_landmark_x_{idx}'].tolist())
-        position_y.extend(frames[f'{hand_type}_landmark_y_{idx}'].tolist())
-        
-        positions = []                
-        for num in range(len(position_x)):
-            positions.append(np.array((position_x[num] , position_y[num])))
-
-        return positions     
-    
-    def write_log(self , idx , left_result ,right_result , left_lost , right_lost ):
-        base_dir = 'debug//distance//'
-        left_path  = os.path.join(base_dir , 'left_log.txt')
-        right_path = os.path.join(base_dir , 'right_log.txt')
-        
-        os.makedirs(base_dir, exist_ok=True)
-        
-        if os.path.exists(left_path) and idx == 1:
-            os.remove(left_path)
-        if os.path.exists(right_path)and idx == 1:
-            os.remove(right_path)
-        
-        if len(left_result) > 0 :            
-            with open(left_path, "a", encoding='utf-8') as file:
-                data = json.dumps(f'{idx} :{left_result}' , indent=4)
-                file.write(f'프레임손실율 : {left_lost}\n')
-                file.write(f'{data}\n\n')
-        
-        if len(right_result) > 0 :
-            with open(right_path, "a", encoding='utf-8') as file:
-                data = json.dumps(f'{idx} :{right_result}' , indent=4)
-                file.write(f'프레임손실율 : {right_lost}\n')
-                file.write(f'{data}\n\n')
-        
+   
     def chose_idx(self , last):
         
         def check():
@@ -185,6 +163,28 @@ class Check_Distance:
             check()
         
         return result
+        
+    def write_log(self , idx , left_result ,right_result , left_lost , right_lost ):
+        base_dir = 'debug//distance//'
+        path  = os.path.join(base_dir , 'log.txt')
+        
+        os.makedirs(base_dir, exist_ok=True)
+        
+        if os.path.exists(path) and idx == 1:
+            os.remove(path)
+        
+        if len(left_result) > 0 or len(right_result) > 0:
+            with open(path, "a", encoding='utf-8') as file:
+                
+                file.write(f'{idx} : 프레임손실율(왼손/오른손) : {left_lost}/{right_lost}\n')
+                if len(left_result) > 0:
+                    left_data  = json.dumps(left_result)                    
+                    file.write(f'왼손: {left_data}\n')
+                if len(right_result) > 0:
+                    right_data = json.dumps(right_result)
+                    file.write(f'오른손: {right_data}\n')
+                file.write(f'\n\n')
+
 class Check_Bone:
     
     def __init__(self , frames :pd.DataFrame, treshold: float , is_debug = False , debug_data = None):
@@ -218,8 +218,8 @@ class Check_Bone:
         right_check = [[False for _ in range(가로)] for _ in range(세로)]
         
         for bone_num in range(20):
-            left_check_idx  = np.where(left_bones[:, bone_num] < left_avges[bone_num] - 0.02)[0].tolist()
-            right_check_idx = np.where(right_bones[:, bone_num] < right_avges[bone_num] - 0.02)[0].tolist()
+            left_check_idx  = np.where(left_bones[:, bone_num] < left_avges[bone_num] - 0.015)[0].tolist()
+            right_check_idx = np.where(right_bones[:, bone_num] < right_avges[bone_num] - 0.015)[0].tolist()
             
             if len(left_check_idx):
                 for num in left_check_idx:
@@ -308,25 +308,24 @@ class Check_Bone:
     def write_log(self , idx , left_result ,right_result , left_lost , right_lost ):
  
         base_dir = 'debug//bone//'
-        left_path  = os.path.join(base_dir , 'left_log.txt')
-        right_path = os.path.join(base_dir , 'right_log.txt')
+        path  = os.path.join(base_dir , 'log.txt')
         
         os.makedirs(base_dir, exist_ok=True)
         
-        if os.path.exists(left_path) and idx == 1:
-            os.remove(left_path)
-        if os.path.exists(right_path)and idx == 1:
-            os.remove(right_path)
-            
-        with open(left_path, "a", encoding='utf-8') as file:
-            data = json.dumps(f'{idx} :{left_result}' , indent=4)
-            file.write(f'프레임손실율 : {left_lost}\n')
-            file.write(f'{data}\n\n')
+        if os.path.exists(path) and idx == 1:
+            os.remove(path)
         
-        with open(right_path, "a", encoding='utf-8') as file:
-            data = json.dumps(f'{idx} :{right_result}' , indent=4)
-            file.write(f'프레임손실율 : {right_lost}\n')
-            file.write(f'{data}\n\n')
+        if len(left_result) > 0 or len(right_result) > 0:
+            with open(path, "a", encoding='utf-8') as file:
+                
+                file.write(f'{idx}프레임손실율(왼손/오른손) : {left_lost}/{right_lost}\n')
+                if len(left_result) > 0:
+                    left_data  = json.dumps(left_result)                    
+                    file.write(f'왼손: {left_data}\n')
+                if len(right_result) > 0:
+                    right_data = json.dumps(right_result)
+                    file.write(f'오른손: {right_data}\n')
+                file.write(f'\n\n')
     
     
     
