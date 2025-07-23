@@ -39,6 +39,7 @@ async def stream_keypoints_video(words_json: str):
             detail=f'{e}' # 클라이언트에게 보여줄 메시지
         )
     
+    print()
     return StreamingResponse(
         api_motion_merge(*motion_data),        
         media_type='text/plain'
