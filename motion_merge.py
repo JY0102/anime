@@ -7,45 +7,7 @@ from typing import Literal
 from Utils.Spline import *
 from Utils.Draw import create_keypoint_video, api_draw
 from Utils.Csv import search_data, search_id 
-
-def api_motion_merge(motion_data, word_type : Literal['Word','Sentence']):
-    dims = (1980,1020)
-    
-    if word_type == 'Sentence':
-        hand_frame_df = []
-        pose_frame_df = []
-        
-        for idx in range(len(motion_data)):
-            if idx == 0:
-                motion_type = 'start'            
-            elif idx == len(motion_data)-1:
-                motion_type = 'end'
-            else:
-                motion_type = 'middle'
-            
-            hand_df, pose_df = cutting_frame(motion_data[idx], 0.6, motion_type)
-            
-            hand_frame_df.append(hand_df)
-            pose_frame_df.append(pose_df)
-            
-            if motion_type != 'end':
-                blank_hand = pd.DataFrame(index=range(10), columns=hand_df.columns)
-                blank_pose = pd.DataFrame(index=range(10), columns=pose_df.columns)
-                            
-                hand_frame_df.append(blank_hand)
-                pose_frame_df.append(blank_pose)
-            
-        merged_hand = pd.concat(hand_frame_df, ignore_index=True)
-        merged_pose = pd.concat(pose_frame_df, ignore_index=True)
-            
-        hand_df = spline(merged_hand)
-        pose_df = spline_cal(merged_pose)
-
-        return api_draw(hand_df, pose_df, dims, frame_len=len(merged_hand))
-    elif word_type == 'Word':
-        hand_df, pose_df = motion_data
-        return api_draw(hand_df , pose_df ,dims , frame_len=len(hand_df))
-    
+   
 def main(motion_data, output):
     hand_frame_df = []
     pose_frame_df = []
@@ -118,6 +80,44 @@ def cutting_frame(motion , standard = 0.8, motion_type : Literal['start', 'middl
         raise TypeError('모션타입 값이 불확실 합니다.')
         
     return piece_hand, piece_pose
+
+def api_motion_merge(motion_data, word_type : Literal['Word','Sentence']):
+    dims = (1980,1020)
+    
+    if word_type == 'Sentence':
+        hand_frame_df = []
+        pose_frame_df = []
+        
+        for idx in range(len(motion_data)):
+            if idx == 0:
+                motion_type = 'start'            
+            elif idx == len(motion_data)-1:
+                motion_type = 'end'
+            else:
+                motion_type = 'middle'
+            
+            hand_df, pose_df = cutting_frame(motion_data[idx], 0.6, motion_type)
+            
+            hand_frame_df.append(hand_df)
+            pose_frame_df.append(pose_df)
+            
+            if motion_type != 'end':
+                blank_hand = pd.DataFrame(index=range(10), columns=hand_df.columns)
+                blank_pose = pd.DataFrame(index=range(10), columns=pose_df.columns)
+                            
+                hand_frame_df.append(blank_hand)
+                pose_frame_df.append(blank_pose)
+            
+        merged_hand = pd.concat(hand_frame_df, ignore_index=True)
+        merged_pose = pd.concat(pose_frame_df, ignore_index=True)
+            
+        hand_df = spline(merged_hand)
+        pose_df = spline_cal(merged_pose)
+
+        return api_draw(hand_df, pose_df, dims, frame_len=len(merged_hand))
+    elif word_type == 'Word':
+        hand_df, pose_df = motion_data
+        return api_draw(hand_df , pose_df ,dims , frame_len=len(hand_df))
 
 def motion_merge(words, send_type : Literal['mp4','api'] = 'mp4'):
     out_name = ''

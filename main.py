@@ -5,10 +5,10 @@ from tqdm import tqdm
 
 from Utils.Draw import *
 from Utils.Spline import *
-from Utils.Csv import insert_csv
+from Utils.Csv import insert_csv, check_csv
 from Utils.Interpolation import Detect_joint
 
-def write_log(log_data, idx):
+def write_log(log_data, idx, is_csv):
     sus, loss_info_tuple = log_data
     if not loss_info_tuple:
         total_frames = 'Error'
@@ -16,8 +16,10 @@ def write_log(log_data, idx):
         right_lost = 'Error'
     else:
         total_frames, left_lost, right_lost = loss_info_tuple
-    
-    base_dir = 'output'
+    if is_csv == 'Y' or is_csv =='y':
+        base_dir = 'DataSet/Words'
+    else:
+        base_dir = 'output'
     path  = os.path.join(base_dir , 'out_log.txt')    
     os.makedirs(base_dir, exist_ok=True)
     
@@ -90,6 +92,21 @@ def main(video_path :str, is_out: bool, is_csv: bool):
     
     return (False, None)
 
+def run(video_path, is_out , is_log , is_csv):
+    video_names = check_video(video_path)     
+    
+    if video_names:
+        for idx in tqdm(range(len(video_names)) , desc= '진행률'): 
+            if check_csv(video_names[idx]) and (is_csv == 'Y' or is_csv == 'y'):
+                continue
+            log_data = main(video_names[idx], is_out, is_csv)
+            if is_log == 'Y' or is_log == 'y':
+                write_log(log_data, idx + 1, is_csv)
+    else:
+        log_data = main(video_path, is_out, is_csv)
+        if is_log == 'Y':
+            write_log(log_data, 1, is_csv)
+
 if __name__ == "__main__":
         
     video_path = None
@@ -140,15 +157,5 @@ if __name__ == "__main__":
         if not video_path:
             raise ValueError('비디오 파일이 없습니다.')
         
-    video_names = check_video(video_path)     
-    
-    if video_names:
-        for idx in tqdm(range(len(video_names)) , desc= '진행률'):   
-            log_data = main(video_names[idx], is_out, is_csv)
-            if is_log == 'Y' or is_log == 'y':
-                write_log(log_data , idx + 1)
-    else:
-        log_data = main(video_path, is_out, is_csv)
-        if is_log == 'Y':
-            write_log(log_data , 1)
+    run(video_path, is_out, is_log, is_csv)
         

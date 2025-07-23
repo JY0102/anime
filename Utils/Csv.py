@@ -1,6 +1,17 @@
 import os
 import pandas as pd
 
+def check_csv(video_path:str)->bool:
+    base = 'DataSet/Words'
+    os.makedirs(base, exist_ok=True)
+    
+    video_name = os.path.split(video_path)[-1]    
+    video_name = video_name.split('.')[0]
+    path = os.path.join(base , f'{video_name}.csv')
+    if os.path.exists(path):
+        return True
+    return False
+    
 def insert_csv(video_name, hand_df: pd.DataFrame,pose_df: pd.DataFrame):
     base = 'DataSet/Words'
     os.makedirs(base, exist_ok=True)
