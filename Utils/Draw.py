@@ -55,6 +55,7 @@ def linear_joint(video_path):
         
     cap.release()
     hands.close()
+    pose.close()
     
     hands_original_df = pd.DataFrame(hands_landmarks_data)
     pose_original_df = pd.DataFrame(pose_landmarks_data)
