@@ -1,12 +1,11 @@
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import sys
 import argparse
 from tqdm import tqdm 
 
-from Utils.draw import *
 from Utils.Spline import *
-from Utils.Check import Detect_joint
+from Utils.Interpolation import Detect_joint
+from Utils.Draw import linear_joint, create_keypoint_debug
 
 
 def debug_check_video(video_path):
@@ -29,7 +28,7 @@ def debug_check_video(video_path):
     return video_names
 
 def debug_test(video_path,is_out, idx):
-
+    video_name = video_path.split('\\')[-1].split('.')[0]
     hands_original_data, pose_original_data, dims = linear_joint(video_path)
 
     if hands_original_data is not None:
@@ -37,9 +36,6 @@ def debug_test(video_path,is_out, idx):
         total_frames = len(hands_original_data)
         left_hand_lost = hands_original_data['left_landmark_x_0'].isna().sum()
         right_hand_lost = hands_original_data['right_landmark_x_0'].isna().sum()
-        # 손실 프레임이 많으면 제작 X
-        if total_frames/left_hand_lost > 25.0:
-            return
 
         debug_data = (idx , left_hand_lost , right_hand_lost)
          
@@ -51,42 +47,45 @@ def debug_test(video_path,is_out, idx):
         pose_df = ( pose_original_data,  pose_interpolated_data)
         
         if is_out:
-            create_keypoint_video(f'test', hand_df, pose_df, dims, frame_len=total_frames, is_debug = True, debug_data = debug_data)
-        
+            create_keypoint_debug(video_name, hand_df, pose_df, dims, frame_len=total_frames, is_debug = True, idx = debug_data[0])
+    raise ValueError('모션이 감지되지 않았습니다.')
 
 if __name__ == "__main__":
         
     video_path = None
-    is_debug = False
+    is_out = True
     
     #f5 로 디버깅 할 때
     if len(sys.argv) == 1:
         # --- 디버그용 ---
-        video_path = r'C:\Users\User\Desktop\원천데이터\REAL\WORD\01' 
-        output_path = 'Debug'
+        video_path = r'C:\Users\User\Desktop\새 폴더' 
         # -----------------------------
+    #명령어로 시작할 때
     else:
         
         parser = argparse.ArgumentParser(description="디버깅용 키포인트 추출 스크립트 . \n Debug파일에 전체적으로 저장이 됨.")
         parser.add_argument('--video', '-v',
                             type=str, 
                             required=True, 
-                            help='처리할 비디오 폴더경로를 입력')
+                            help='처리할 비디오 폴더(디렉토리)경로를 입력 ** mp4 파일경로 x **')
         parser.add_argument('--out', '-o',
                             type=bool, 
                             required=False, 
                             default=False,
-                            help='Bool 값 .비디오 출력을 할지 선택.디버깅용 영상은 보간된 구간이 빨간색으로 변함. ')
+                            help='True: 비디오출력 , 기본값 : False \n비디오 출력을 할지 선택.디버깅용 영상은 보간된 구간이 빨간색으로 변함. ')
 
         args = parser.parse_args()
     
         video_path  = args.video 
-        is_debug = args.out
+        is_out = args.out
         
     video_names = debug_check_video(video_path)
     
     for idx in tqdm(range(len(video_names)) , desc='진행률'):     
-        debug_test(video_names[idx], is_debug, idx + 1)    
+        try:
+            debug_test(video_names[idx], is_out, idx + 1)    
+        except ValueError as e:
+            print(e.with_traceback)
 
         
     

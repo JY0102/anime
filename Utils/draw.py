@@ -1,14 +1,14 @@
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
 import cv2
-import mediapipe as mp
 import numpy as np
 import pandas as pd
+import mediapipe as mp
+from typing import Literal
+
 
 def linear_joint(video_path):
     """
-    영상에서 양손의 '모든' 랜드마크를 추출하고, 누락된 프레임을 찾아 보간하는 함수.
+    영상에서 양손과 몸 랜드마크를 추출하고, 누락된 프레임을 찾는 함수
     """
     mp_hands = mp.solutions.hands
     hands = mp_hands.Hands(
@@ -95,11 +95,16 @@ def create_pose(results):
 
 def draw_hand(frame, pose_df, hand_df, hand_side, frame_dims, frame_idx, is_debug = False):
     """한 손의 랜드마크와 연결선을 그리는 보조 함수."""
-    
-    original_df, interpolated_df = hand_df
-    pose_origin, _ = pose_df
-    
-    original_row = original_df.loc[frame_idx]
+    if is_debug:
+        original_df, interpolated_df = hand_df
+        pose_origin, _ = pose_df
+        
+        original_row = original_df.loc[frame_idx]        
+        is_original = pd.notna(original_row[f'{hand_side}_landmark_x_0'])        
+    else:
+        interpolated_df = hand_df
+        pose_origin = pose_df
+        
     landmark_row = interpolated_df.loc[frame_idx]
     pose_row = pose_origin.loc[frame_idx]
     
@@ -115,7 +120,6 @@ def draw_hand(frame, pose_df, hand_df, hand_side, frame_dims, frame_idx, is_debu
     mp_hands = mp.solutions.hands
     frame_width, frame_height = frame_dims
 
-    is_original = pd.notna(original_row[f'{hand_side}_landmark_x_0'])
     up_pos = 0
     if is_debug:
         dot_color = (255, 0, 0) if is_original else (0, 0, 255)
@@ -150,13 +154,16 @@ def draw_pose(frame, pose_df, frame_dims, frame_idx, is_debug = False):
     
     mp_pose = mp.solutions.pose
     frame_width, frame_height = frame_dims
-
-    hand_original_df , hand_interpolated_df = pose_df
     
-    original_row = hand_original_df.loc[frame_idx]
-    landmark_row = hand_interpolated_df.loc[frame_idx]
+    if is_debug:
+        original_df , interpolated_df = pose_df
+        original_row = original_df.loc[frame_idx]
+        is_original = pd.notna(original_row[f'pose_landmark_x_0'])        
+    else:
+        interpolated_df = pose_df
     
-    is_original = pd.notna(original_row[f'pose_landmark_x_0'])
+    landmark_row = interpolated_df.loc[frame_idx]
+    
     up_pos = 0
     if is_debug:
         dot_color = (255, 0, 0) if is_original else (0, 0, 255)
@@ -189,7 +196,7 @@ def draw_pose(frame, pose_df, frame_dims, frame_idx, is_debug = False):
             if points[idx]:
                 cv2.circle(frame, points[idx], 5, dot_color, -1)
                 
-def visualize_debug(video_path, hand_df, pose_df , frame_dimensions, loss_info):
+def realtime_visualize(video_path, hand_df, pose_df , frame_dimensions, loss_info):
     """
     보간된 양손의 결과와 프레임 손실 정보를 영상 위에 시각화하는 함수.
     """
@@ -202,8 +209,8 @@ def visualize_debug(video_path, hand_df, pose_df , frame_dimensions, loss_info):
         if not ret: break
         
         
-        draw_hand(frame, hand_df, 'left', frame_dimensions , frame_idx, is_debug=True)
-        draw_hand(frame, hand_df, 'right', frame_dimensions , frame_idx, is_debug=True)
+        draw_hand(frame, pose_df, hand_df, 'left', frame_dimensions , frame_idx, is_debug=True)
+        draw_hand(frame, pose_df, hand_df, 'right', frame_dimensions , frame_idx, is_debug=True)
         
         draw_pose(frame, pose_df, frame_dimensions, frame_idx, is_debug= True)
 
@@ -223,48 +230,86 @@ def visualize_debug(video_path, hand_df, pose_df , frame_dimensions, loss_info):
     cap.release()
     cv2.destroyAllWindows()
 
-def create_keypoint_video(output_filename, hand_df, pose_df, frame_dimensions, fps=30 , frame_len = 0, is_debug = False , debug_data = None):
+def create_keypoint_video(output_filename, hand_df, pose_df, frame_dimensions, fps=30 , frame_len = 0, out_type : Literal['Word', 'Sentence'] ='Word'):
     """
     키포인트 애니메이션을 시각화하고 MP4 파일로 저장하는 함수.
     """
     frame_width, frame_height = frame_dimensions
 
     fourcc = cv2.VideoWriter_fourcc(*'mp4v') # MP4 코덱
-    if not is_debug:
-        base_dir = 'output'
-        os.makedirs(base_dir, exist_ok=True)        
-        video_path = os.path.join(base_dir , f'{output_filename}.mp4')
+    base_dir = f'output//{out_type}'
+    os.makedirs(base_dir, exist_ok=True)        
+    video_path = os.path.join(base_dir , f'{output_filename}.mp4')
+    
+    video_writer = cv2.VideoWriter(video_path, fourcc, fps, (frame_width, frame_height))        
+    
+    for frame_idx in range(frame_len):
+        black_canvas = np.zeros((frame_height, frame_width, 3), dtype=np.uint8)
+
+        draw_pose(black_canvas, pose_df, frame_dimensions, frame_idx )
         
-        video_writer = cv2.VideoWriter(video_path, fourcc, fps, (frame_width, frame_height))        
-    elif debug_data:
-        base_dir = 'debug'                    
-        os.makedirs(base_dir, exist_ok=True)        
-        video_path = os.path.join(base_dir , f'{output_filename}{debug_data[0]}.mp4')
+        draw_hand(black_canvas, pose_df, hand_df, 'left',  frame_dimensions, frame_idx)
+        draw_hand(black_canvas, pose_df, hand_df, 'right', frame_dimensions, frame_idx) 
+
+        video_writer.write(black_canvas)
         
-        video_writer = cv2.VideoWriter(video_path, fourcc, fps, (frame_width, frame_height))
+    video_writer.release()
+    cv2.destroyAllWindows()
+    
+def create_keypoint_debug(output_filename, hand_df, pose_df, frame_dimensions, fps=30 , frame_len = 0, idx = None):
+    """
+    키포인트 애니메이션을 시각화하고 MP4,PNG 두 파일로 저장하는 함수 -> 디버깅용
+    ** 보간된 부분은 빨간색으로 강조됨 **
+    """
+    frame_width, frame_height = frame_dimensions
+
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v') # MP4 코덱
+    
+    base_dir = 'debug'                    
+    os.makedirs(base_dir, exist_ok=True)        
+    video_path = os.path.join(base_dir , f'{output_filename}{idx}.mp4')
+    
+    video_writer = cv2.VideoWriter(video_path, fourcc, fps, (frame_width, frame_height))
         
     for frame_idx in range(frame_len):
         black_canvas = np.zeros((frame_height, frame_width, 3), dtype=np.uint8)
 
-        draw_pose(black_canvas, pose_df, frame_dimensions, frame_idx , is_debug)
+        draw_pose(black_canvas, pose_df, frame_dimensions, frame_idx , is_debug=True)
         
-        draw_hand(black_canvas, pose_df, hand_df, 'left',  frame_dimensions, frame_idx, is_debug)
-        draw_hand(black_canvas, pose_df, hand_df, 'right', frame_dimensions, frame_idx, is_debug) 
+        draw_hand(black_canvas, pose_df, hand_df, 'left',  frame_dimensions, frame_idx, is_debug=True)
+        draw_hand(black_canvas, pose_df, hand_df, 'right', frame_dimensions, frame_idx, is_debug=True) 
 
         video_writer.write(black_canvas)
         
         #png 파일 생성
-        if is_debug and debug_data:
-            idx , _ , _ = debug_data
-            base_dir = f'debug//{output_filename}{idx}'
-            os.makedirs(base_dir, exist_ok=True)
-            
-            png_filename = os.path.join(base_dir, f'frame_{frame_idx:04d}.png')
-            cv2.imwrite(png_filename, black_canvas)
+        base_dir = f'debug//{output_filename}{idx}'
+        os.makedirs(base_dir, exist_ok=True)
+        
+        png_filename = os.path.join(base_dir, f'frame_{frame_idx:04d}.png')
+        cv2.imwrite(png_filename, black_canvas)
 
     video_writer.release()
     cv2.destroyAllWindows()
     
-    
+def api_draw(hand_df, pose_df, frame_dimensions, frame_len):
+    """
+    키포인트 프레임을 한 장씩 생성하여 yield하는 제너레이터 함수.
+    """
+    frame_width, frame_height = frame_dimensions
 
+    for frame_idx in range(frame_len):
+        # 1. 프레임 생성 (기존 코드와 동일)
+        black_canvas = np.zeros((frame_height, frame_width, 3), dtype=np.uint8)
+        
+        draw_pose(black_canvas, pose_df, frame_dimensions, frame_idx)
+        draw_hand(black_canvas, pose_df, hand_df, 'left', frame_dimensions, frame_idx)
+        draw_hand(black_canvas, pose_df, hand_df, 'right', frame_dimensions, frame_idx)
 
+        # 2. 프레임을 파일에 쓰는 대신, JPEG 이미지로 인코딩
+        (flag, encoded_image) = cv2.imencode(".jpg", black_canvas)
+        if not flag:
+            continue
+
+        # 3. 인코딩된 이미지를 HTTP multipart 형식에 맞춰 yield
+        yield (b'--frame\r\n' 
+               b'Content-Type: image/jpeg\r\n\r\n' + encoded_image.tobytes() + b'\r\n')

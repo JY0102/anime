@@ -1,19 +1,26 @@
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import json
 import numpy as np
 import pandas as pd
+
 class Detect_joint:         
 
     frames = None
     def __init__(self , df : pd.DataFrame, treshold : float = 8, is_debug = False, debug_data = None):       
-        
+        """MediaPipe에서 추출한 RawData를 알고리즘을 이용하여 일부 보간
+
+        Args:
+            df (pd.DataFrame): MediaPipe에서 출력한 데이터프레임
+            treshold (float, optional): 임계값.해당 값이 크면 클 수록 이상치 값 감지가 둔해짐.권장 값 7 ~ 9
+            is_debug (bool, optional): 디버깅용인지 여부. True라면 Log 작성
+            debug_data (_type_, optional): 디버깅에 필요한 데이터
+        """
         self.frames = df
         # 관절 이동거리에 비례해서 이상치 값 추출
-        self.distance = Check_Distance(df , treshold , is_debug , debug_data)
+        self.distance = Interpolation_Distance(df , treshold , is_debug , debug_data)
         
         # 뼈 길이에 비례해서 이상치 값 추출
-        Check_Bone(df , treshold ,is_debug , debug_data)
+        Interpolation_Bone(df , treshold ,is_debug , debug_data)
         
         self.delete_data()
         
@@ -22,15 +29,15 @@ class Detect_joint:
             delete_column = self.frames.loc[idx].filter(like='left',axis=0).index 
             self.frames.loc[idx, delete_column] = np.nan
                   
-class Check_Distance:
-   
+class Interpolation_Distance:
+    """이동 거리에 비례해서 이상치 값을 추출합니다.
+    """
+    
     left_last = None
     right_last = None
     
     def __init__(self, frames :pd.DataFrame, treshold: float, is_debug = False , debug_data = None):
-        """
-        이동 거리에 비례해서 이상치 값을 추출합니다.
-        
+        """        
         Args:
             frames: 좌표 데이터.
             treshold: 이상치 판단을 위한 임계값 배수.
@@ -185,8 +192,10 @@ class Check_Distance:
                     file.write(f'오른손: {right_data}\n')
                 file.write(f'\n\n')
 
-class Check_Bone:
-    
+class Interpolation_Bone:
+    """
+    개발중
+    """
     def __init__(self , frames :pd.DataFrame, treshold: float , is_debug = False , debug_data = None):
         
         """
@@ -326,7 +335,4 @@ class Check_Bone:
                     right_data = json.dumps(right_result)
                     file.write(f'오른손: {right_data}\n')
                 file.write(f'\n\n')
-    
-    
-    
     
