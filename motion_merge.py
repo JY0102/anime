@@ -149,7 +149,7 @@ def motion_merge(words, send_type : Literal['mp4','api'] = 'mp4'):
         out_path = f'output//Sentence//{out_name}.mp4'
         # API 요청일 때 (문장)
         if send_type == 'api':
-            return (motion_data[0], 'Sentence')
+            return (motion_data, 'Sentence')
         elif send_type == 'mp4':
             if not os.path.exists(out_path):
                 main(motion_data, out_name)
