@@ -95,14 +95,14 @@ def create_pose(results):
 
     return frame_landmarks
 
-def draw_hand(frame, pose_df, hand_df, hand_side, frame_dims, frame_idx, is_debug = False):
+def draw_hand(frame, pose_df, hand_df, hand_type, frame_dims, frame_idx, is_debug = False):
     """한 손의 랜드마크와 연결선을 그리는 보조 함수."""
     if is_debug:
         original_df, interpolated_df = hand_df
         pose_origin, _ = pose_df
         
         original_row = original_df.loc[frame_idx]        
-        is_original = pd.notna(original_row[f'{hand_side}_landmark_x_0'])        
+        is_original = pd.notna(original_row[f'{hand_type}_landmark_x_0'])        
     else:
         interpolated_df = hand_df
         pose_origin = pose_df
@@ -111,12 +111,12 @@ def draw_hand(frame, pose_df, hand_df, hand_side, frame_dims, frame_idx, is_debu
     pose_row = pose_origin.loc[frame_idx]
     
     # pose의 손목과 hands의 손목을 붙이는 계산
-    if hand_side == 'left':
+    if hand_type == 'left':
         first_pose = (pose_row['pose_landmark_x_16'] , pose_row['pose_landmark_y_16'])
     else:
         first_pose = (pose_row['pose_landmark_x_15'] , pose_row['pose_landmark_y_15'])
        
-    cal = (first_pose[0] - landmark_row[f'{hand_side}_landmark_x_0'] , first_pose[1] - landmark_row[f'{hand_side}_landmark_y_0']) 
+    cal = (first_pose[0] - landmark_row[f'{hand_type}_landmark_x_0'] , first_pose[1] - landmark_row[f'{hand_type}_landmark_y_0']) 
     
         
     mp_hands = mp.solutions.hands
@@ -133,13 +133,17 @@ def draw_hand(frame, pose_df, hand_df, hand_side, frame_dims, frame_idx, is_debu
 
     points = []
     for i in range(21):
-        x = landmark_row[f'{hand_side}_landmark_x_{i}'] + cal[0]
-        y = landmark_row[f'{hand_side}_landmark_y_{i}'] - up_pos + cal[1]
+        x = landmark_row[f'{hand_type}_landmark_x_{i}'] + cal[0]
+        y = landmark_row[f'{hand_type}_landmark_y_{i}'] - up_pos + cal[1]
         if pd.notna(x) and pd.notna(y):
             points.append((int(x * frame_width), int(y * frame_height)))
         else:
             points.append(None)
     
+    # 테스트 
+    # from Utils.rotation import calculate_hand_rotation
+    # calculate_hand_rotation(points, hand_type)
+    # 테스트
     if points:
         for connection in mp_hands.HAND_CONNECTIONS:
             start_idx, end_idx = connection[0], connection[1]
@@ -289,7 +293,7 @@ def create_keypoint_debug(output_filename, hand_df, pose_df, frame_dimensions, f
         
         png_filename = os.path.join(base_dir, f'frame_{frame_idx:04d}.png')
         cv2.imwrite(png_filename, black_canvas)
-
+        
     video_writer.release()
     cv2.destroyAllWindows()
     
@@ -311,9 +315,10 @@ def api_draw(hand_df, pose_df, frame_dimensions, frame_len):
         if not flag:
             continue
 
-        base64_bytes = base64.b64encode(encoded_image)
-        base64_string = base64_bytes.decode('utf-8')
+        base64_bytes = base64.b64encode(encoded_image)  
 
-        yield base64_string
+        yield base64_bytes + b'\n'
+        # yield base64_string
+
         # yield (b'--frame\r\n' 
         #        b'Content-Type: image/jpeg\r\n\r\n' + encoded_image.tobytes() + b'\r\n')

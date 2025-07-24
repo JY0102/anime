@@ -16,7 +16,7 @@ def spline(df):
     
 def spline_cal(interpolated_df):
     original_df = pd.DataFrame(interpolated_df)
-    interpolated_df = original_df.interpolate(method='akima') 
+    interpolated_df = original_df.interpolate(method='akima', limit_direction='both') 
         
     return interpolated_df
     

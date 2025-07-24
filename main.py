@@ -117,8 +117,9 @@ if __name__ == "__main__":
     #f5 로 디버깅 할 때
     if len(sys.argv) == 1:
         # --- 디버그용 ---
-        video_path = r'c:\Users\User\Desktop\원천데이터\REAL\WORD\01\NIA_SL_WORD1502_REAL01_F.mp4' 
+        video_path = r'C:\Users\User\Desktop\지문자' 
         is_out = 1
+        is_csv = 'Y'
         # -----------------------------
     #명령어 실행
     else:

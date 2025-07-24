@@ -47,7 +47,7 @@ def debug_test(video_path,is_out, idx):
         pose_df = ( pose_original_data,  pose_interpolated_data)
         
         if is_out:
-            create_keypoint_debug(video_name, hand_df, pose_df, dims, frame_len=total_frames, is_debug = True, idx = debug_data[0])
+            create_keypoint_debug(video_name, hand_df, pose_df, dims, frame_len=total_frames, idx = debug_data[0])
     raise ValueError('모션이 감지되지 않았습니다.')
 
 if __name__ == "__main__":
@@ -58,7 +58,7 @@ if __name__ == "__main__":
     #f5 로 디버깅 할 때
     if len(sys.argv) == 1:
         # --- 디버그용 ---
-        video_path = r'C:\Users\User\Desktop\새 폴더' 
+        video_path = r'C:\Users\User\Desktop\지문자' 
         # -----------------------------
     #명령어로 시작할 때
     else:

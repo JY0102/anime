@@ -8,7 +8,7 @@ from Utils.Spline import *
 from Utils.Draw import create_keypoint_video, api_draw
 from Utils.Csv import search_data, search_id 
    
-def made_video(motion_data, output):
+def made_video(motion_data, output,blank_range = 7):
     hand_frame_df = []
     pose_frame_df = []
     
@@ -20,14 +20,14 @@ def made_video(motion_data, output):
         else:
             motion_type = 'middle'
         
-        hand, pose = cutting_frame(motion_data[idx], 0.6, motion_type)
+        hand, pose = cutting_frame(motion_data[idx], motion_type = motion_type)
         
         hand_frame_df.append(hand)
         pose_frame_df.append(pose)
         
         if motion_type != 'end':
-            blank_hand = pd.DataFrame(index=range(10), columns=hand.columns)
-            blank_pose = pd.DataFrame(index=range(10), columns=pose.columns)
+            blank_hand = pd.DataFrame(index=range(blank_range), columns=hand.columns)
+            blank_pose = pd.DataFrame(index=range(blank_range), columns=pose.columns)
                         
             hand_frame_df.append(blank_hand)
             pose_frame_df.append(blank_pose)
@@ -41,7 +41,7 @@ def made_video(motion_data, output):
     
     create_keypoint_video(output, hand_df, pose_df, dims, frame_len=len(merged_hand), out_type = 'Sentence')
 
-def cutting_frame(motion , standard = 0.8, motion_type : Literal['start', 'middle', 'end'] = None):
+def cutting_frame(motion , standard = 0.67, motion_type : Literal['start', 'middle', 'end'] = None):
     """
     motion_type:
     
@@ -138,7 +138,7 @@ def check_merge(words, send_type : Literal['mp4','api'] = 'mp4'):
         if len(motion_data) == 1:
             # API 요청일 때 (단어)
             if send_type == 'api':
-                    return (motion_data[0], 'Word')
+                    return (motion_data[0], 'Word') , fail_name
             elif send_type == 'mp4':
                 name_path = f'output//Word//{search_id(out_name)}.mp4'
                 if os.path.exists(name_path):                    
@@ -149,7 +149,7 @@ def check_merge(words, send_type : Literal['mp4','api'] = 'mp4'):
         out_path = f'output//Sentence//{out_name}.mp4'
         # API 요청일 때 (문장)
         if send_type == 'api':
-            return (motion_data, 'Sentence')
+            return (motion_data, 'Sentence'), fail_name
         elif send_type == 'mp4':
             if not os.path.exists(out_path):
                 made_video(motion_data, out_name)
@@ -158,12 +158,13 @@ def check_merge(words, send_type : Literal['mp4','api'] = 'mp4'):
     else:
         raise ValueError(f'데이터가 존재하지 않습니다.\n없는 단어 : {fail_name}')
 
-if __name__ == "__main__":
+if __name__ == "__main__":  
     words = []
     
     #f5 로 디버깅 할 때
     if len(sys.argv) == 1:
-        words = ['성토','없는단어','남매']
+        # words = ['힘','여동생', '견제하다','망가지다', '울보', '힘', '남매']
+        words = ['청년', '회사', '취업', '성공']
     #명령어 실행
     else:
         parser = argparse.ArgumentParser(description="키포인트 추출 -> 좌표 보간 -> 영상과 함께 출력 또는 KeyPoint만 따로 출력")
@@ -185,7 +186,7 @@ if __name__ == "__main__":
         for fail in fail_name:
             print('없는단어: ',fail)
     except Exception as e:
-        print(e.with_traceback)
+        print(e)
 
 
 
