@@ -58,7 +58,7 @@ if __name__ == "__main__":
     #f5 로 디버깅 할 때
     if len(sys.argv) == 1:
         # --- 디버그용 ---
-        video_path = r'C:\Users\User\Desktop\지문자' 
+        video_path = r'c:\Users\User\Desktop\지문자' 
         # -----------------------------
     #명령어로 시작할 때
     else:

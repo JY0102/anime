@@ -81,8 +81,10 @@ def made_video(video_path :str, is_out: bool, is_csv: bool):
         
         match is_out:
             case 0:
-                realtime_visualize(video_path, hand_df, pose_df, dims, loss_info_tuple)
-            case 1:
+                hand_df_tuple = (hands_original_data , hand_df)
+                pose_df_tuple = (pose_original_data , pose_df)
+                realtime_visualize(video_path, hand_df_tuple, pose_df_tuple, dims, loss_info_tuple)
+            case 1:                
                 create_keypoint_video(video_name, hand_df, pose_df, dims, frame_len=total_frames)
         
         if is_csv == 'Y' or is_csv == 'y':
@@ -117,9 +119,8 @@ if __name__ == "__main__":
     #f5 로 디버깅 할 때
     if len(sys.argv) == 1:
         # --- 디버그용 ---
-        video_path = r'C:\Users\User\Desktop\지문자' 
-        is_out = 1
-        is_csv = 'Y'
+        video_path = r'c:\Users\User\Desktop\지문자\NIA_SL_WORD1541_REAL01_F.mp4' 
+        is_out = 0
         # -----------------------------
     #명령어 실행
     else:

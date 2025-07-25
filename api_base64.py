@@ -29,18 +29,18 @@ app = FastAPI()
 @app.get("/stream/realtime")
 async def stream_keypoints_video(words_json: str):
     words = words_json.split(',')
-    for t in words:
-        print(t)    
+       
     try:
-        motion_data = check_merge(words, send_type='api')
+        motion_data,fail_names= check_merge(words, send_type='api')
+        for f in fail_names:
+            print('못찾은단어:', f)
     except Exception as e:
         raise HTTPException(
             status_code=500, 
             detail=f'{e}' # 클라이언트에게 보여줄 메시지
         )
     
-    print()
     return StreamingResponse(
         api_motion_merge(*motion_data),        
-        media_type='text/plain'
+         media_type='application/x-ndjson'
     )

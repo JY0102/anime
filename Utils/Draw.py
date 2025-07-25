@@ -213,8 +213,7 @@ def realtime_visualize(video_path, hand_df, pose_df , frame_dimensions, loss_inf
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret: break
-        
-        
+                
         draw_hand(frame, pose_df, hand_df, 'left', frame_dimensions , frame_idx, is_debug=True)
         draw_hand(frame, pose_df, hand_df, 'right', frame_dimensions , frame_idx, is_debug=True)
         
