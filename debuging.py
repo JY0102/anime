@@ -17,7 +17,7 @@ def debug_check_video(video_path):
     video_names = []
     for video_name in sorted(os.listdir(video_path)):
         _, file_extension = os.path.splitext(video_name)
-        if file_extension == '':
+        if 'mp4' not in file_extension:
             continue
         
         path = os.path.join(video_path , video_name)
