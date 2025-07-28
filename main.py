@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 from Utils.Draw import *
 from Utils.Spline import *
-from Utils.Csv import insert_csv, check_csv
+from Utils.Csv import insert_csv, check_csv, search_data_for_mmpose
 from Utils.Interpolation import Detect_joint
 
 def write_log(log_data, idx, is_csv):
@@ -62,8 +62,9 @@ def check_video(video_path):
 
 def made_video(video_path :str, is_out: bool, is_csv: bool):
     video_name = video_path.split('\\')[-1].split('.')[0]
-    hands_original_data, pose_original_data, dims = linear_joint(video_path)
-
+    pose_original_data, dims = linear_joint(video_path)
+    hands_original_data = search_data_for_mmpose(video_name)
+    
     if hands_original_data is not None:
 
         total_frames = len(hands_original_data)
@@ -99,7 +100,7 @@ def run(video_path, is_out , is_log , is_csv):
     
     if video_names:
         for idx in tqdm(range(len(video_names)) , desc= '진행률'): 
-            if check_csv(video_names[idx]) and (is_csv == 'Y' or is_csv == 'y'):
+            if check_csv(video_names[idx]) and (is_csv == 'Y' or is_csv == 'y'):    
                 continue
             log_data = made_video(video_names[idx], is_out, is_csv)
             if is_log == 'Y' or is_log == 'y':
@@ -119,9 +120,9 @@ if __name__ == "__main__":
     #f5 로 디버깅 할 때
     if len(sys.argv) == 1:
         # --- 디버그용 ---
-        video_path = r'c:\Users\User\Desktop\새 폴더 (2)' 
-        # is_out = 0
-        is_csv = 'Y'
+        video_path = r'c:\Users\User\Desktop\지문자' 
+        is_out = 1
+        # is_csv = 'Y'
         # -----------------------------
     #명령어 실행
     else:

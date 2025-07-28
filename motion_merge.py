@@ -145,22 +145,22 @@ def check_merge(words, send_type : Literal['mp4','api'] = 'mp4'):
             if send_type == 'api':
                 return (motion_data[0], 'Word') , fail_name
             elif send_type == 'mp4':
-                name_path = f'output//Word//{search_id(out_name)}.mp4'
+                name_path = f'output//Word//{out_name}.mp4'
                 if os.path.exists(name_path):                    
                     return name_path , fail_name 
                 made_video(motion_data, out_name, out_type='Word')        
             else:
                 raise ValueError(f'데이터가 존재하지 않습니다.\n없는 단어 : {fail_name}')
-
-        out_path = f'output//Sentence//{out_name}.mp4'
-        # API 요청일 때 (문장)
-        if send_type == 'api':
-            return (motion_data, 'Sentence'), fail_name
-        elif send_type == 'mp4':
-            if not os.path.exists(out_path):
-                made_video(motion_data, out_name, out_type='Sentence')
+        else:
+            out_path = f'output//Sentence//{out_name}.mp4'
+            # API 요청일 때 (문장)
+            if send_type == 'api':
+                return (motion_data, 'Sentence'), fail_name
+            elif send_type == 'mp4':
+                if not os.path.exists(out_path):
+                    made_video(motion_data, out_name, out_type='Sentence')
             
-        return out_path , fail_name
+            return out_path , fail_name
     else:
         raise ValueError(f'데이터가 존재하지 않습니다.\n없는 단어 : {fail_name}')
 
@@ -174,10 +174,9 @@ if __name__ == "__main__":
         
         # words = ['아내','밥','거저먹다']
         # words = ['청년','꿈','포기','회사','취업']
-        words = ['ㄱ','ㄴ','ㄷ']
+        words = ['성공']
         # words = ['엄마','귀엽다','아기','밥','주다']
         # words = ['바다','수영']
-        
     #명령어 실행
     else:
         parser = argparse.ArgumentParser(description="키포인트 추출 -> 좌표 보간 -> 영상과 함께 출력 또는 KeyPoint만 따로 출력")

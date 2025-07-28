@@ -6,8 +6,49 @@ import pandas as pd
 import mediapipe as mp
 from typing import Literal
 
-
 def linear_joint(video_path):
+    """
+    영상에서 몸 랜드마크를 추출하고, 누락된 프레임을 찾는 함수
+    """
+    
+    mp_pose = mp.solutions.pose
+    pose = mp_pose.Pose(
+        static_image_mode=False,       
+        model_complexity=2,             
+        smooth_landmarks=True,          
+        enable_segmentation=False,      
+        min_detection_confidence=0.5,   
+        min_tracking_confidence=0.5     
+    )
+    
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print(f"오류: {video_path} 파일을 열 수 없습니다.")
+        return None, None, (0, 0)
+
+    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    
+    pose_landmarks_data = []
+    
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret: break
+        
+        image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        pose_results = pose.process(image_rgb)
+        
+        pose_data = create_pose(pose_results)
+        pose_landmarks_data.append(pose_data)
+        
+    cap.release()
+    pose.close()
+    
+    pose_original_df = pd.DataFrame(pose_landmarks_data)
+    
+    return  pose_original_df, (frame_width, frame_height)
+
+def linear_joint_test(video_path):
     """
     영상에서 양손과 몸 랜드마크를 추출하고, 누락된 프레임을 찾는 함수
     """

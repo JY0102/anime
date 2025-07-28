@@ -1,6 +1,8 @@
 import os
 import pandas as pd
 
+BASE_DIR = r'C:\Users\User\Desktop\mmpose_2d\output'
+
 def check_csv(video_path:str)->bool:
     base = 'DataSet/Words'
     os.makedirs(base, exist_ok=True)
@@ -44,6 +46,20 @@ def search_data(wordname):
         
         return (hand_data , pose_data)
     return None
+
+def search_data_for_mmpose(video_name):
+    path = os.path.join(BASE_DIR, f'{video_name}.csv')
+    
+    if not os.path.exists(path):
+        raise ValueError('파일이 존재하지 않습니다.')
+    
+    data = pd.read_csv(path)
+    
+    left_hand_data = data.filter(like='left', axis=1)
+    right_hand_data = data.filter(like='right', axis=1)
+    hand_data = pd.concat([left_hand_data , right_hand_data], axis=1)
+    
+    return hand_data
 
 def search_id(wordname) -> str:
     check = pd.read_csv('DataSet//words_data.csv')

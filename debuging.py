@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 from Utils.Spline import *
 from Utils.Interpolation import Detect_joint
-from Utils.Draw import linear_joint, create_keypoint_debug
+from Utils.Draw import linear_joint_test, create_keypoint_debug
 
 
 def debug_check_video(video_path):
@@ -29,7 +29,7 @@ def debug_check_video(video_path):
 
 def debug_test(video_path,is_out, idx):
     video_name = video_path.split('\\')[-1].split('.')[0]
-    hands_original_data, pose_original_data, dims = linear_joint(video_path)
+    hands_original_data, pose_original_data, dims = linear_joint_test(video_path)
 
     if hands_original_data is not None:
         
