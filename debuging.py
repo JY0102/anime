@@ -36,10 +36,20 @@ def debug_test(video_path,is_out, idx):
         total_frames = len(hands_original_data)
         left_hand_lost = hands_original_data['left_landmark_x_0'].isna().sum()
         right_hand_lost = hands_original_data['right_landmark_x_0'].isna().sum()
+        
+        print('왼손: ', left_hand_lost)
+        print('오른손: ', right_hand_lost)
+        
 
         debug_data = (idx , left_hand_lost , right_hand_lost)
          
         check_data = Detect_joint(hands_original_data , is_debug= True , debug_data = debug_data)
+        
+        왼손_프레임 = hands_original_data['left_landmark_x_0'].isna().sum()
+        오른손_프레임 = hands_original_data['right_landmark_x_0'].isna().sum()
+        print('왼손: ', 왼손_프레임)
+        print('오른손: ', 오른손_프레임)
+        
         hand_interpolated_data = spline(check_data.frames)
         pose_interpolated_data = spline_cal(pose_original_data)
         

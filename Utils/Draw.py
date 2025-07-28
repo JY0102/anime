@@ -255,8 +255,9 @@ def create_keypoint_video(output_filename, hand_df, pose_df, frame_dimensions, f
         
         draw_hand(black_canvas, pose_df, hand_df, 'left',  frame_dimensions, frame_idx)
         draw_hand(black_canvas, pose_df, hand_df, 'right', frame_dimensions, frame_idx) 
-
-        video_writer.write(black_canvas)
+        
+        flipped_canvas = cv2.flip(black_canvas, 1)
+        video_writer.write(flipped_canvas)
         
     video_writer.release()
     cv2.destroyAllWindows()
@@ -284,9 +285,10 @@ def create_keypoint_debug(output_filename, hand_df, pose_df, frame_dimensions, f
         draw_hand(black_canvas, pose_df, hand_df, 'left',  frame_dimensions, frame_idx, is_debug=True)
         draw_hand(black_canvas, pose_df, hand_df, 'right', frame_dimensions, frame_idx, is_debug=True) 
 
-        video_writer.write(black_canvas)
+        flipped_canvas = cv2.flip(black_canvas, 1)
+
+        video_writer.write(flipped_canvas)
         
-        #png 파일 생성
         base_dir = f'debug//{output_filename}{idx}'
         os.makedirs(base_dir, exist_ok=True)
         
@@ -310,7 +312,9 @@ def api_draw(hand_df, pose_df, frame_dimensions, frame_len):
         draw_hand(black_canvas, pose_df, hand_df, 'left', frame_dimensions, frame_idx)
         draw_hand(black_canvas, pose_df, hand_df, 'right', frame_dimensions, frame_idx)
 
-        (flag, encoded_image) = cv2.imencode(".jpg", black_canvas)
+        flipped_canvas = cv2.flip(black_canvas, 1)
+        
+        (flag, encoded_image) = cv2.imencode(".jpg", flipped_canvas)
         if not flag:
             continue
 
